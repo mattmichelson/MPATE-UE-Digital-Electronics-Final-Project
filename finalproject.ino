@@ -2,7 +2,7 @@
 //Digital Electronics final project
 ///these are all the numbered variables
 int ledPins[8] = {12, 11, 10, 9, 8, 7, 6, 5};
-int buttonPins [2] = {30, 31};
+int buttonPins [3] = {30, 31, 32};
 int switchPin = 28;
 int prevChannelButtonPin = 27;
 int nextChannelButtonPin = 26;
@@ -10,15 +10,17 @@ int channelDisplayed = 0;
 int midiNotes[3] = { 60, 62, 64};
 int currentStep = 0;
 unsigned long lastStepTime = 0;
+unsigned long lastRecordTime = 0;
 int tempo = 0;
 
 //booleans
-boolean lastButtonStates [2] = {LOW};
-boolean buttonStates [2] = {LOW};
+boolean lastButtonStates [3] = {LOW};
+boolean buttonStates [3] = {LOW};
 boolean prevChannelButtonState = LOW;
 boolean lastPrevChannelButtonState = LOW;
 boolean nextChannelButtonState = LOW;
 boolean lastNextChannelButtonState = LOW;
+boolean recordOn = false;
 boolean on[3][8] = {
   { LOW },
   { LOW },
@@ -32,12 +34,13 @@ void setup() {
     pinMode(ledPins [i], OUTPUT);
   }
 
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 3; i++) {
     pinMode(buttonPins [i], INPUT);
   }
   pinMode(switchPin, INPUT);
   pinMode(prevChannelButtonPin, INPUT);
   pinMode(nextChannelButtonPin, INPUT);
+  pinMode(13, OUTPUT);
 }
 
 void loop() {
@@ -45,23 +48,15 @@ void loop() {
   //changes the channel
   checkButtons();
   //turns on or off the leds
-  setLeds();
-  //sends the midi note(s) in the selected order
-  sequence();
-
-}
-
-void sequence() {
-  //gives tempo control to that pin
-  tempo = analogRead(A14);
-
-  //switch
-  if (digitalRead(switchPin) == HIGH) {
-    forwardStep(tempo);
+  if (recordOn == true) {
+    plainSequence();
+    digitalWrite(13, HIGH);
   }
 
-  if (digitalRead(switchPin) == LOW) {
-    backwardStep(tempo);
+  if (recordOn == false) {
+    midiSequence();
+    digitalWrite(13, LOW);
+
   }
 }
 
@@ -72,18 +67,21 @@ void checkButtons() {
      If they are pressed, that step will turn on until pressed again
   */
 
-  //mic button
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 3; i++) {
     lastButtonStates[i] = buttonStates [i];
     buttonStates [i] = digitalRead(buttonPins [i]);
   }
 
-  if (buttonStates [0] == HIGH && lastButtonStates [0] == LOW) {
-    if (on[channelDisplayed][currentStep] == false) {
-      on[channelDisplayed][currentStep] = true;
+  //record button
+  if (buttonStates [2] == HIGH && lastButtonStates [2] == LOW) {
+    if (recordOn == false) {
+      recordOn = true;
+
+    } else if (recordOn == true) {
+      recordOn = false;
     }
   }
-  
+
   //reset button
   for (int i = 0; i < 8; i++) {
     if (buttonStates [1] == HIGH && lastButtonStates [1] == LOW) {
@@ -119,6 +117,137 @@ void checkButtons() {
   }
 }
 
+void plainSequence() {
+  //step through the LEDs in a different array
+
+  if (millis() > lastRecordTime + 100) {   //if its time to go to the next step...
+    //mic button
+    if (buttonStates [0] == HIGH && lastButtonStates [0] == LOW) {
+      if (on[channelDisplayed][currentStep] == false) {
+        on[channelDisplayed][currentStep] = true;
+        lastRecordTime = millis();
+      }
+    }
+  }
+
+  
+
+  tempo = analogRead(A14);
+
+  if (digitalRead(switchPin) == HIGH) {
+
+    if (millis() > lastStepTime + tempo) {   //if its time to go to the next step...
+      currentStep = currentStep + 1;         //increment to the next step
+      Serial.println(currentStep);
+      if (currentStep > 7) {
+        currentStep = 0;
+      }
+
+      for (int i = 0; i < 8; i++) {
+        if (i == currentStep) {
+          digitalWrite(ledPins[i], HIGH);
+        }
+        else {
+          digitalWrite(ledPins[i], LOW);
+        }
+
+
+        lastStepTime = millis();               //set lastStepTime to the current time
+      }
+    }
+
+  }
+
+  if (digitalRead(switchPin) == LOW) {
+
+    if (millis() > lastStepTime + tempo) {   //if its time to go to the next step...
+      //mic button
+      if (buttonStates [0] == HIGH && lastButtonStates [0] == LOW) {
+        if (on[channelDisplayed][currentStep] == false) {
+          on[channelDisplayed][currentStep] = true;
+        }
+      }
+
+      currentStep = currentStep - 1;         //increment to the next step
+      Serial.println(currentStep);
+      if (currentStep < 0) {
+        currentStep = 7;
+      }
+
+      for (int i = 0; i < 8; i++) {
+        if (i == currentStep) {
+          digitalWrite(ledPins[i], HIGH);
+        }
+        else {
+          digitalWrite(ledPins[i], LOW);
+        }
+
+        lastStepTime = millis();               //set lastStepTime to the current time
+      }
+    }
+  }
+}
+
+void midiSequence() {
+
+  setLeds();
+  tempo = analogRead(A14);
+
+  if (digitalRead(switchPin) == HIGH) {
+
+    if (millis() > lastStepTime + tempo) {   //if its time to go to the next step...
+
+      for (int i = 0; i < 3; i++) {
+        usbMIDI.sendNoteOff(midiNotes[i], 0, 1); //send midi note off
+      }
+
+      currentStep = currentStep + 1;         //increment to the next step
+      Serial.println(currentStep);
+      if (currentStep > 7) {
+        currentStep = 0;
+      }
+
+      for (int i = 0; i < 8; i++) {
+        if (on[i][currentStep] == true) {
+          usbMIDI.sendNoteOn(midiNotes[i], 127, 1); //send midi note on
+          usbMIDI.sendNoteOff(midiNotes[i], 0, 1); //send midi note off
+        }
+      }
+
+      lastStepTime = millis();               //set lastStepTime to the current time
+    }
+  }
+
+
+
+  if (digitalRead(switchPin) == LOW) {
+
+    //sends the midi notes when stepping backwards and the current step is selected
+    if (millis() > lastStepTime + tempo) {   //if its time to go to the next step...
+      //digitalWrite(ledPins[currentStep], LOW);  //turn off the current led
+
+      for (int i = 0; i < 2; i++) {
+        usbMIDI.sendNoteOff(midiNotes[i], 0, 1); //send Midi note off
+      }
+
+      currentStep = currentStep - 1;         //increment to the next step
+      if (currentStep < 0) {
+        currentStep = 7;
+      }
+
+      for (int i = 0; i < 2; i++) {
+        if (on[i][currentStep] == true) {
+          usbMIDI.sendNoteOn(midiNotes[i], 127, 1); //send midi note on
+          usbMIDI.sendNoteOff(midiNotes[i], 0, 1);//send midi note off
+        }
+
+      }
+      lastStepTime = millis();               //set lastStepTime to the current time
+    }
+  }
+
+}
+
 void setLeds() {
   for (int i = 0; i < 8; i++) {
     //for  the current channel, if the step is selected turn that LED on
@@ -131,58 +260,6 @@ void setLeds() {
     else if (on [channelDisplayed][i] == false || i == currentStep) {
       digitalWrite(ledPins [i], LOW);
     }
-  }
-}
-
-
-void forwardStep(int potentiometer) {
-  //sends the midi notes when stepping forwards and the current step is selected
-
-  if (millis() > lastStepTime + tempo) {   //if its time to go to the next step...
-
-    for (int i = 0; i < 3; i++) {
-      usbMIDI.sendNoteOff(midiNotes[i], 0, 1); //send midi note off
-    }
-
-    currentStep = currentStep + 1;         //increment to the next step
-    Serial.println(currentStep);
-    if (currentStep > 7) {
-      currentStep = 0;
-    }
-
-    for (int i = 0; i < 7; i++) {
-      if (on[i][currentStep] == true) {
-        usbMIDI.sendNoteOn(midiNotes[i], 127, 1); //send midi note on
-        usbMIDI.sendNoteOff(midiNotes[i], 0, 1); //send midi note off
-      }
-    }
-
-    lastStepTime = millis();               //set lastStepTime to the current time
-  }
-}
-
-void backwardStep(int potentiometer) {
-  //sends the midi notes when stepping backwards and the current step is selected
-  if (millis() > lastStepTime + tempo) {   //if its time to go to the next step...
-    //digitalWrite(ledPins[currentStep], LOW);  //turn off the current led
-
-    for (int i = 0; i < 2; i++) {
-      usbMIDI.sendNoteOff(midiNotes[i], 0, 1); //send Midi note off
-    }
-
-    currentStep = currentStep - 1;         //increment to the next step
-    if (currentStep < 0) {
-      currentStep = 7;
-    }
-
-    for (int i = 0; i < 2; i++) {
-      if (on[i][currentStep] == true) {
-        usbMIDI.sendNoteOn(midiNotes[i], 127, 1); //send midi note on
-        usbMIDI.sendNoteOff(midiNotes[i], 0, 1);//send midi note off
-      }
-
-    }
-    lastStepTime = millis();               //set lastStepTime to the current time
   }
 }
 
