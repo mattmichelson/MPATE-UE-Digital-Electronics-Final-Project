@@ -130,7 +130,7 @@ void plainSequence() {
     }
   }
 
-  
+
 
   tempo = analogRead(A14);
 
@@ -260,6 +260,42 @@ void setLeds() {
     else if (on [channelDisplayed][i] == false || i == currentStep) {
       digitalWrite(ledPins [i], LOW);
     }
+  }
+}
+
+void sequenceWithSelectedStep() {
+  setLeds();
+  tempo = analogRead(A14);
+
+  if (digitalRead(switchPin) == HIGH) {
+
+    if (millis() > lastStepTime + tempo) {   //if its time to go to the next step...
+
+      currentStep = currentStep + 1;         //increment to the next step
+      Serial.println(currentStep);
+      if (currentStep > 7) {
+        currentStep = 0;
+      }
+
+      lastStepTime = millis();               //set lastStepTime to the current time
+    }
+  }
+
+
+
+  if (digitalRead(switchPin) == LOW) {
+
+    //sends the midi notes when stepping backwards and the current step is selected
+    if (millis() > lastStepTime + tempo) {   //if its time to go to the next step...
+      //digitalWrite(ledPins[currentStep], LOW);  //turn off the current led
+
+      currentStep = currentStep - 1;         //increment to the next step
+      if (currentStep < 0) {
+        currentStep = 7;
+      }
+
+    }
+    lastStepTime = millis();               //set lastStepTime to the current time
   }
 }
 
