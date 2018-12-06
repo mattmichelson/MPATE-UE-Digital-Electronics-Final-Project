@@ -26,7 +26,7 @@ int switchPin = 28;
 int prevChannelButtonPin = 27;
 int nextChannelButtonPin = 26;
 int channelDisplayed = 1;
-int midiNotes[3] = { 36, 38, 44};
+int midiNotes[16] = { 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66};
 int currentStep = 0;
 unsigned long lastStepTime = 0;
 unsigned long lastRecordTime = 0;
@@ -41,7 +41,7 @@ boolean lastPrevChannelButtonState = LOW;
 boolean nextChannelButtonState = LOW;
 boolean lastNextChannelButtonState = LOW;
 boolean recordOn = false;
-boolean on[3][8] = {
+boolean on[16][8] = {
   { LOW },
   { LOW },
   { LOW }
@@ -84,7 +84,6 @@ void loop() {
   if (recordOn == false) {
     midiSequence();
     digitalWrite(13, LOW);
-
   }
 }
 
@@ -128,7 +127,7 @@ void checkButtons() {
 
       --channelDisplayed;
       if (channelDisplayed < 1) {
-        channelDisplayed = 3;
+        channelDisplayed = 16;
       }
 
       if (channelDisplayed == 1) {
@@ -140,6 +139,49 @@ void checkButtons() {
       }
       if (channelDisplayed == 3) {
         display.showNumberHexEx(0xc3);
+      }
+      if (channelDisplayed == 4) {
+        display.showNumberHexEx(0xc4);
+      }
+
+      if (channelDisplayed == 5) {
+        display.showNumberHexEx(0xc5);
+      }
+      if (channelDisplayed == 6) {
+        display.showNumberHexEx(0xc6);
+      }
+      if (channelDisplayed == 7) {
+        display.showNumberHexEx(0xc7);
+      }
+
+      if (channelDisplayed == 8) {
+        display.showNumberHexEx(0xc8);
+      }
+      if (channelDisplayed == 9) {
+        display.showNumberHexEx(0xc9);
+      }
+      if (channelDisplayed == 10) {
+        display.showNumberHexEx(0xc10);
+      }
+
+      if (channelDisplayed == 11) {
+        display.showNumberHexEx(0xc11);
+      }
+      if (channelDisplayed == 12) {
+        display.showNumberHexEx(0xc12);
+      }
+      if (channelDisplayed == 13) {
+        display.showNumberHexEx(0xc13);
+      }
+
+      if (channelDisplayed == 14) {
+        display.showNumberHexEx(0xc14);
+      }
+      if (channelDisplayed == 15) {
+        display.showNumberHexEx(0xc15);
+      }
+      if (channelDisplayed == 16) {
+        display.showNumberHexEx(0xc16);
       }
       lastPressTime = millis();
     }
@@ -152,7 +194,7 @@ void checkButtons() {
 
     if (nextChannelButtonState == HIGH && lastNextChannelButtonState == LOW) {
       channelDisplayed++;
-      if (channelDisplayed > 3) {
+      if (channelDisplayed > 16) {
         channelDisplayed = 1;
       }
       //Serial.println("Current channel is:"channelDisplayed);
@@ -160,18 +202,54 @@ void checkButtons() {
       if (channelDisplayed == 1) {
         display.showNumberHexEx(0xc1);
       }
-
       if (channelDisplayed == 2) {
         display.showNumberHexEx(0xc2);
       }
       if (channelDisplayed == 3) {
         display.showNumberHexEx(0xc3);
       }
+      if (channelDisplayed == 4) {
+        display.showNumberHexEx(0xc4);
+      }
+      if (channelDisplayed == 5) {
+        display.showNumberHexEx(0xc5);
+      }
+      if (channelDisplayed == 6) {
+        display.showNumberHexEx(0xc6);
+      }
+      if (channelDisplayed == 7) {
+        display.showNumberHexEx(0xc7);
+      }
+      if (channelDisplayed == 8) {
+        display.showNumberHexEx(0xc8);
+      }
+      if (channelDisplayed == 9) {
+        display.showNumberHexEx(0xc9);
+      }
+      if (channelDisplayed == 10) {
+        display.showNumberHexEx(0xc10);
+      }
+      if (channelDisplayed == 11) {
+        display.showNumberHexEx(0xc11);
+      }
+      if (channelDisplayed == 12) {
+        display.showNumberHexEx(0xc12);
+      }
+      if (channelDisplayed == 13) {
+        display.showNumberHexEx(0xc13);
+      }
+      if (channelDisplayed == 14) {
+        display.showNumberHexEx(0xc14);
+      }
+      if (channelDisplayed == 15) {
+        display.showNumberHexEx(0xc15);
+      }
+      if (channelDisplayed == 16) {
+        display.showNumberHexEx(0xc16);
+      }
       lastPressTime = millis();
     }
   }
-
-
 }
 
 void plainSequence() {
@@ -186,7 +264,6 @@ void plainSequence() {
       }
     }
   }
-
 
 
   tempo = analogRead(A14);
@@ -207,7 +284,6 @@ void plainSequence() {
         else {
           digitalWrite(ledPins[i], LOW);
         }
-
 
         lastStepTime = millis();               //set lastStepTime to the current time
       }
@@ -254,7 +330,7 @@ void midiSequence() {
 
     if (millis() > lastStepTime + tempo) {   //if its time to go to the next step...
 
-      for (int i = 0; i < 3; i++) {
+      for (int i = 0; i < 16; i++) {
         usbMIDI.sendNoteOff(midiNotes[i], 0, 1); //send midi note off
       }
 
@@ -264,7 +340,7 @@ void midiSequence() {
         currentStep = 0;
       }
 
-      for (int i = 0; i < 3; i++) {
+      for (int i = 0; i < 16; i++) {
         if (on[i][currentStep] == true) {
           usbMIDI.sendNoteOn(midiNotes[i], 127, 1); //send midi note on
           usbMIDI.sendNoteOff(midiNotes[i], 0, 1); //send midi note off
@@ -283,7 +359,7 @@ void midiSequence() {
     if (millis() > lastStepTime + tempo) {   //if its time to go to the next step...
       //digitalWrite(ledPins[currentStep], LOW);  //turn off the current led
 
-      for (int i = 0; i < 3; i++) {
+      for (int i = 0; i < 16; i++) {
         usbMIDI.sendNoteOff(midiNotes[i], 0, 1); //send Midi note off
       }
 
@@ -292,7 +368,7 @@ void midiSequence() {
         currentStep = 7;
       }
 
-      for (int i = 0; i < 3 ; i++) {
+      for (int i = 0; i < 16 ; i++) {
         if (on[i][currentStep] == true) {
           usbMIDI.sendNoteOn(midiNotes[i], 127, 1); //send midi note on
           usbMIDI.sendNoteOff(midiNotes[i], 0, 1);//send midi note off
