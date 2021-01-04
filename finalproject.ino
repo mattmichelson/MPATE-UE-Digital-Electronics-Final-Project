@@ -1,5 +1,8 @@
-//Matthew Michelson
-//Digital Electronics final project
+/* Matthew Michelson */
+
+/*Digital Electronics Final Project */
+
+  /* M I D I  C L A P  */
 
 
 
