@@ -1,9 +1,15 @@
 //Matthew Michelson
 //Digital Electronics final project
+
+
+
+/*init for the display */
+
 #include <Arduino.h>
 #include <TM1637Display.h>
 
-// Module connection pins (Digital Pins)
+/* Module connection pins (Digital Pins) */
+
 #define CLK 2
 #define DIO 3
 
@@ -19,12 +25,13 @@ TM1637Display display(CLK, DIO);
 
 
 
-///these are all the numbered variables
-int ledPins[8] = {12, 11, 10, 9, 8, 7, 6, 5};
-int buttonPins [3] = {30, 31, 32};
-int switchPin = 28;
-int prevChannelButtonPin = 27;
-int nextChannelButtonPin = 26;
+/*These are all the numbered variables*/
+
+int ledPins[16] = {5, 6, 7, 8, 9, 10, 11, 12, 24, 25, 26, 27, 28, 29, 30, 31};
+int buttonPins [4] = {36, 35, 34, 37};
+int switchPin = 38;
+int prevChannelButtonPin = 39;
+int nextChannelButtonPin = 14;
 int channelDisplayed = 1;
 int midiNotes[16] = { 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66};
 int currentStep = 0;
@@ -33,7 +40,8 @@ unsigned long lastRecordTime = 0;
 unsigned long lastPressTime = 0;
 int tempo = 0;
 
-//booleans
+/*Booleans*/
+
 boolean lastButtonStates [3] = {LOW};
 boolean buttonStates [3] = {LOW};
 boolean prevChannelButtonState = LOW;
@@ -41,20 +49,21 @@ boolean lastPrevChannelButtonState = LOW;
 boolean nextChannelButtonState = LOW;
 boolean lastNextChannelButtonState = LOW;
 boolean recordOn = false;
-boolean on[16][8] = {
+boolean on[16][16] = {
   { LOW },
   { LOW },
   { LOW }
 };
 
 void setup() {
-  //pinModes
+  /*pinModes */
+  
   Serial.begin(9600);
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < 16; i++) {
     pinMode(ledPins [i], OUTPUT);
   }
 
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 4; i++) {
     pinMode(buttonPins [i], INPUT);
   }
   pinMode(switchPin, INPUT);
@@ -71,10 +80,13 @@ void loop() {
   }
 
 
-  //checks to see the button(s) selected
-  //changes the channel
+  /* Checks to see the button(s) selected */
+  /* Changes the channel */
+  
   checkButtons();
-  //turns on or off the leds
+  
+  /* Turns on or off the leds */
+  
   if (recordOn == true) {
     //plainSequence();
     sequenceWithSelectedStep();
@@ -94,12 +106,13 @@ void checkButtons() {
      If they are pressed, that step will turn on until pressed again
   */
 
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 4; i++) {
     lastButtonStates[i] = buttonStates [i];
     buttonStates [i] = digitalRead(buttonPins [i]);
   }
 
-  //record button
+  /*record button */
+  
   if (buttonStates [2] == HIGH && lastButtonStates [2] == LOW) {
     if (recordOn == false) {
       recordOn = true;
@@ -109,15 +122,27 @@ void checkButtons() {
     }
   }
 
-  //reset button
-  for (int i = 0; i < 8; i++) {
+  /* Channel Reset Button */
+  
+  for (int i = 0; i < 16; i++) {
     if (buttonStates [1] == HIGH && lastButtonStates [1] == LOW) {
       on[channelDisplayed - 1][i] = false;
     }
   }
+  
+  /* Master Reset Button */
+  
+  for (int i = 0; i < 16; i++) {
+    for (int j = 0; j < 8; j++) {
+      if (buttonStates [3] == HIGH && lastButtonStates [3] == LOW) {
+        on[j][i] = false;
+      }
+    }
+  }
 
 
-  //this code switches through the 3 channels
+  /* Switches through the 3 channels while checking button states */
+  
   if (millis() > lastPressTime + 200) {
     lastPrevChannelButtonState = prevChannelButtonState;
     prevChannelButtonState = digitalRead(prevChannelButtonPin);
@@ -252,75 +277,6 @@ void checkButtons() {
   }
 }
 
-void plainSequence() {
-  //detect mic input
-
-  if (millis() > lastRecordTime + 50) {   //if its time to go to the next step...
-    //mic button
-    if (buttonStates [0] == HIGH && lastButtonStates [0] == LOW) {
-      if (on[channelDisplayed - 1][currentStep] == false) {
-        on[channelDisplayed - 1][currentStep] = true;
-        lastRecordTime = millis();
-      }
-    }
-  }
-
-
-  tempo = analogRead(A14);
-
-  if (digitalRead(switchPin) == HIGH) {
-
-    if (millis() > lastStepTime + tempo) {   //if its time to go to the next step...
-      currentStep = currentStep + 1;         //increment to the next step
-      Serial.println(currentStep);
-      if (currentStep > 8) {
-        currentStep = 0;
-      }
-
-      for (int i = 0; i < 8; i++) {
-        if (i == currentStep) {
-          digitalWrite(ledPins[i], HIGH);
-        }
-        else {
-          digitalWrite(ledPins[i], LOW);
-        }
-
-        lastStepTime = millis();               //set lastStepTime to the current time
-      }
-    }
-
-  }
-
-  if (digitalRead(switchPin) == LOW) {
-
-    if (millis() > lastStepTime + tempo) {   //if its time to go to the next step...
-      //mic button
-      if (buttonStates [0] == HIGH && lastButtonStates [0] == LOW) {
-        if (on[channelDisplayed - 1][currentStep] == false) {
-          on[channelDisplayed - 1][currentStep] = true;
-        }
-      }
-
-      currentStep = currentStep - 1;         //increment to the next step
-      Serial.println(currentStep);
-      if (currentStep < 0) {
-        currentStep = 7;
-      }
-
-      for (int i = 0; i < 8; i++) {
-        if (i == currentStep) {
-          digitalWrite(ledPins[i], HIGH);
-        }
-        else {
-          digitalWrite(ledPins[i], LOW);
-        }
-
-        lastStepTime = millis();               //set lastStepTime to the current time
-      }
-    }
-  }
-}
-
 void midiSequence() {
 
   setLeds();
@@ -336,7 +292,7 @@ void midiSequence() {
 
       currentStep = currentStep + 1;         //increment to the next step
       Serial.println(currentStep);
-      if (currentStep > 7) {
+      if (currentStep > 15) {
         currentStep = 0;
       }
 
@@ -355,7 +311,8 @@ void midiSequence() {
 
   if (digitalRead(switchPin) == LOW) {
 
-    //sends the midi notes when stepping backwards and the current step is selected
+    /* Sends the midi notes to teensy 3.5 when stepping backwards and the current step is selected */
+    
     if (millis() > lastStepTime + tempo) {   //if its time to go to the next step...
       //digitalWrite(ledPins[currentStep], LOW);  //turn off the current led
 
@@ -365,7 +322,7 @@ void midiSequence() {
 
       currentStep = currentStep - 1;         //increment to the next step
       if (currentStep < 0) {
-        currentStep = 7;
+        currentStep = 15;
       }
 
       for (int i = 0; i < 16 ; i++) {
@@ -382,7 +339,7 @@ void midiSequence() {
 }
 
 void setLeds() {
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < 16; i++) {
     //for  the current channel, if the step is selected turn that LED on
     if (on [channelDisplayed - 1][i] == true || i == currentStep) {
       digitalWrite(ledPins [i], HIGH);
@@ -399,7 +356,9 @@ void setLeds() {
 void sequenceWithSelectedStep() {
 
   if (millis() > lastRecordTime + 50) {   //if its time to go to the next step...
-    //mic button
+    
+    /* Mic Button */
+    
     if (buttonStates [0] == HIGH && lastButtonStates [0] == LOW) {
       if (on[channelDisplayed - 1][currentStep] == false) {
         on[channelDisplayed - 1][currentStep] = true;
@@ -417,7 +376,7 @@ void sequenceWithSelectedStep() {
 
       currentStep = currentStep + 1;         //increment to the next step
       Serial.println(currentStep);
-      if (currentStep > 7) {
+      if (currentStep > 15) {
         currentStep = 0;
       }
 
@@ -429,13 +388,14 @@ void sequenceWithSelectedStep() {
 
   if (digitalRead(switchPin) == LOW) {
 
-    //sends the midi notes when stepping backwards and the current step is selected
+    /* Sends the midi notes to the teensy when stepping backwards and the current step is selected */
+    
     if (millis() > lastStepTime + tempo) {   //if its time to go to the next step...
       //digitalWrite(ledPins[currentStep], LOW);  //turn off the current led
 
       currentStep = currentStep - 1;         //decrement to the next step
       if (currentStep < 0) {
-        currentStep = 7;
+        currentStep = 15;
       }
 
       lastStepTime = millis();               //set lastStepTime to the current time
