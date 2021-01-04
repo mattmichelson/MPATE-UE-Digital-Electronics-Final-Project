@@ -91,9 +91,5 @@ You're there with your DAW open, ready to make music. You think of a drum rhythm
 </li>
 </ul>
 <p> </p>
-<h2>Obstacles</h2>
-<ul>
-<li>There were multiple obstacles I encountered in the making of this project. The main challenge was refining the way the sound detector behaves. I found the digital sound detector was extremely difficult to control because it only really sends on and off messages. It also seemed to have a hard time detecting transients, however, sustained sounds it responded well too. However, I experimented with the analog sound detector and that seemed to give me the most control, since it sent actual values regarding the intensity.</li>
-</ul>
 
 </pre>
